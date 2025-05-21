@@ -1,17 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { FormEvent, useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/src/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/src/components/ui/card"
+import { Badge } from "@/src/components/ui/badge"
+import { Textarea } from "@/src/components/ui/textarea"
+import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar"
 import { MessageSquare, ArrowLeft, Paperclip, Send, Bot } from "lucide-react"
-import { Chatbot } from "@/components/chatbot"
+import { Chatbot } from "@/src/components/chatbot"
 
-export default function ChamadoDetalhePage({ params }) {
-  const { id } = params
+export default function ChamadoDetalhePage(params: { params: { id: string } }) {
+  // Extraindo o ID do chamado da URL
+  const { id } = params.params
 
   // Dados de exemplo para o chamado
   const chamado = {
@@ -72,7 +73,7 @@ export default function ChamadoDetalhePage({ params }) {
 
   const [novaMensagem, setNovaMensagem] = useState("")
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status:string) => {
     switch (status) {
       case "aberto":
         return "bg-blue-100 text-blue-800"
@@ -85,7 +86,7 @@ export default function ChamadoDetalhePage({ params }) {
     }
   }
 
-  const getPrioridadeColor = (prioridade) => {
+  const getPrioridadeColor = (prioridade:string) => {
     switch (prioridade) {
       case "alta":
         return "bg-red-100 text-red-800"
@@ -98,7 +99,7 @@ export default function ChamadoDetalhePage({ params }) {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e:FormEvent) => {
     e.preventDefault()
     if (novaMensagem.trim() === "") return
 

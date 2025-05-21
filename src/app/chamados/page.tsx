@@ -1,16 +1,26 @@
 "use client"
 
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/src/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/src/components/ui/card"
+import { Badge } from "@/src/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs"
 import { MessageSquare, Plus, Filter, Bot } from "lucide-react"
-import { Chatbot } from "@/components/chatbot"
+import { Chatbot } from "@/src/components/chatbot"
+
+interface Chamado {
+  id: number
+  titulo: string
+  departamento: string
+  status: string
+  data: string
+  prioridade: string
+  mensagens: number
+}
 
 export default function ChamadosPage() {
   // Dados de exemplo para chamados
-  const chamados = [
+  const chamados:Chamado[] = [
     {
       id: 1,
       titulo: "Problema com impressora do setor",
@@ -49,7 +59,7 @@ export default function ChamadosPage() {
     },
   ]
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status:string) => {
     switch (status) {
       case "aberto":
         return "bg-blue-100 text-blue-800"
@@ -62,7 +72,7 @@ export default function ChamadosPage() {
     }
   }
 
-  const getPrioridadeColor = (prioridade) => {
+  const getPrioridadeColor = (prioridade:string) => {
     switch (prioridade) {
       case "alta":
         return "bg-red-100 text-red-800"

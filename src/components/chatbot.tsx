@@ -3,12 +3,13 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar"
+import { Input } from "../components/ui/input"
+import { Badge } from "../components/ui/badge"
 import { Send, X, Minimize2, Maximize2, Bot } from "lucide-react"
+import { v4 as uuidv4 } from "uuid"
 
 type Message = {
   id: number
@@ -31,100 +32,67 @@ export function Chatbot() {
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [sessionId, setSessionId] = useState<string>("")
 
-  // Simula respostas do chatbot
-  const simulateResponse = (userMessage: string) => {
+  // Inicializa o ID da sessão quando o componente é montado
+  useEffect(() => {
+    // Verifica se já existe um ID de sessão no localStorage
+    const existingSessionId = localStorage.getItem("chatSessionId")
+    if (existingSessionId) {
+      setSessionId(existingSessionId)
+    } else {
+      // Cria um novo ID de sessão
+      const newSessionId = uuidv4()
+      localStorage.setItem("chatSessionId", newSessionId)
+      setSessionId(newSessionId)
+    }
+  }, [])
+
+  // Função para enviar mensagem para a API
+  const sendMessageToAPI = async (userMessage: string) => {
     setIsTyping(true)
 
-    // Respostas pré-definidas baseadas em palavras-chave
-    const responses = [
-      {
-        keywords: ["olá", "oi", "ei", "bom dia", "boa tarde", "boa noite"],
-        response:
-          "Olá! Como posso ajudar você hoje? Posso registrar um chamado, verificar o status de chamados existentes ou fornecer informações sobre os departamentos.",
-      },
-      {
-        keywords: ["chamado", "problema", "solicitar", "ajuda", "suporte", "registrar"],
-        response: "Entendi que você precisa registrar um chamado. Pode me contar qual é o problema ou solicitação?",
-        followUp: true,
-      },
-      {
-        keywords: ["impressora", "imprimir", "scanner", "digitalizar"],
-        response:
-          "Parece que você está tendo problemas com equipamentos de impressão. Vou registrar um chamado para o departamento de TI. Qual é o seu setor e a localização do equipamento?",
-        followUp: true,
-      },
-      {
-        keywords: ["internet", "rede", "wifi", "conexão", "lenta", "caindo"],
-        response:
-          "Problemas de conexão podem afetar sua produtividade. Vou registrar um chamado para o suporte de rede. Em qual setor você está e desde quando está enfrentando esse problema?",
-        followUp: true,
-      },
-      {
-        keywords: ["material", "escritório", "caneta", "papel", "suprimento"],
-        response:
-          "Para solicitação de materiais de escritório, vou registrar um chamado para o Almoxarifado. Quais itens você precisa e qual é a quantidade?",
-        followUp: true,
-      },
-      {
-        keywords: ["ar condicionado", "ar-condicionado", "temperatura", "calor", "frio"],
-        response:
-          "Problemas com a temperatura do ambiente serão encaminhados para a Manutenção. Qual é a sua localização e qual é o problema específico?",
-        followUp: true,
-      },
-      {
-        keywords: ["obrigado", "obrigada", "valeu", "agradeço"],
-        response: "Por nada! Estou aqui para ajudar. Há mais alguma coisa em que eu possa auxiliar você hoje?",
-      },
-    ]
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          sessionId: sessionId,
+        }),
+      })
 
-    // Verifica se alguma palavra-chave corresponde
-    let foundResponse = false
-    let responseText = ""
-
-    for (const item of responses) {
-      if (item.keywords.some((keyword) => userMessage.toLowerCase().includes(keyword))) {
-        responseText = item.response
-        foundResponse = true
-
-        // Se for uma mensagem de follow-up para registro de chamado
-        if (item.followUp) {
-          setTimeout(() => {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: Date.now() + 1,
-                content:
-                  "Estou registrando essas informações. Você poderia fornecer mais detalhes para que possamos atender sua solicitação da melhor forma?",
-                sender: "bot",
-                timestamp: new Date(),
-              },
-            ])
-          }, 3000)
-        }
-        break
+      if (!response.ok) {
+        throw new Error("Falha na comunicação com o servidor")
       }
-    }
 
-    // Resposta padrão se nenhuma palavra-chave for encontrada
-    if (!foundResponse) {
-      responseText =
-        "Não tenho certeza se entendi completamente. Você poderia fornecer mais detalhes sobre sua solicitação? Ou, se preferir, posso criar um chamado para você falar diretamente com um atendente."
-    }
+      const data = await response.json()
 
-    // Simula o tempo de digitação
-    setTimeout(() => {
       setIsTyping(false)
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now(),
-          content: responseText,
+          content: data.response,
           sender: "bot",
           timestamp: new Date(),
         },
       ])
-    }, 1500)
+    } catch (error) {
+      console.error("Erro ao enviar mensagem:", error)
+      setIsTyping(false)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          content: "Desculpe, tive um problema ao processar sua mensagem. Poderia tentar novamente?",
+          sender: "bot",
+          timestamp: new Date(),
+        },
+      ])
+    }
   }
 
   const handleSendMessage = (e?: React.FormEvent) => {
@@ -141,42 +109,17 @@ export function Chatbot() {
     }
 
     setMessages((prev) => [...prev, newMessage])
-    setInput("")
 
-    // Simula a resposta do bot
-    simulateResponse(input)
+    // Envia a mensagem para a API
+    sendMessageToAPI(input)
+
+    // Limpa o campo de entrada
+    setInput("")
   }
 
   // Rola para a última mensagem quando novas mensagens são adicionadas
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  // Verifica se a última mensagem contém palavras-chave de conclusão de chamado
-  useEffect(() => {
-    const lastMessage = messages[messages.length - 1]
-    if (lastMessage && lastMessage.sender === "user") {
-      const containsCompletionKeywords = ["concluir", "finalizar", "pronto", "terminei", "acabei"].some((keyword) =>
-        lastMessage.content.toLowerCase().includes(keyword),
-      )
-
-      if (containsCompletionKeywords) {
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: Date.now(),
-              content:
-                "Seu chamado foi registrado com sucesso! O número do protocolo é #" +
-                Math.floor(10000 + Math.random() * 90000) +
-                ". Você receberá atualizações sobre o andamento do seu chamado. Posso ajudar com mais alguma coisa?",
-              sender: "bot",
-              timestamp: new Date(),
-            },
-          ])
-        }, 1500)
-      }
-    }
   }, [messages])
 
   return (
@@ -277,8 +220,9 @@ export function Chatbot() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     className="flex-1"
+                    disabled={isTyping}
                   />
-                  <Button type="submit" size="icon" className="h-10 w-10">
+                  <Button type="submit" size="icon" className="h-10 w-10" disabled={isTyping}>
                     <Send className="h-4 w-4" />
                   </Button>
                 </form>

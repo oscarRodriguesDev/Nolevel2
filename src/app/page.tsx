@@ -1,10 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/src/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { ChevronRight, MessageSquare, Users, Clock, Bot } from "lucide-react"
-import { Chatbot } from "@/components/chatbot"
+import { Chatbot } from "@/src/components/chatbot"
 
 export default function Home() {
   return (
@@ -264,4 +264,4 @@ export default function Home() {
 }
 
 // Importação do Avatar para a seção de demonstração do chatbot
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar"
