@@ -22,12 +22,7 @@ export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      content: "Olá! Eu sou a Hevelyn, sua assistente virtual. Como posso ajudar você hoje?",
-      sender: "bot",
-      timestamp: new Date(),
-    },
+ 
   ])
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
@@ -115,6 +110,7 @@ export function Chatbot() {
 
     // Limpa o campo de entrada
     setInput("")
+ 
   }
 
   // Rola para a última mensagem quando novas mensagens são adicionadas
@@ -219,6 +215,7 @@ export function Chatbot() {
                     placeholder="Digite sua mensagem..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    onFocus={e => e.target.focus()}
                     className="flex-1"
                     disabled={isTyping}
                   />

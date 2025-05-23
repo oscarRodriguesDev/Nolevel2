@@ -1,141 +1,104 @@
-// Tipos
-export type ChatMessage = {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+import { randomUUID } from 'crypto';
+
+export type Chamado = {
+  id: string;
+  mensagem: string;
+  status: string;
+  criadoEm: string;
 };
 
-export type UserSession = {
-  name?: string;
-  chamado?: {
-    titulo: string;
-    mensagem: string;
-    status: string;
-  };
-  messages: ChatMessage[];
-  lastActivity?: number;
-  timeout?: NodeJS.Timeout;
-};
-
-// Quadro de avisos
-const avisos: Record<string, string> = {
-  aviso1: "Os colaboradores que desejam ferias para julho, agosto e setembro devem procurar seu gestor imediato para solicitar!",
-  aviso2: "Teremos um atraso no deposito do vale transporte, o mesmo sera depositado no dia 10/10/2023",
-};
-
-function getAvisos(): string {
-  return Object.entries(avisos)
-    .map(([key, value]) => `- ${key}: ${value}`)
-    .join('\n');
-}
-
-// Protocolo de atendimento
-const protocoloAtendimento: Record<string, string> = {
-  protocolo1: "Se apresentar como Hevelyn, atendente da empresa, e perguntar o nome do colaborador.",
-  protocolo2: "Se o colaborador não souber o que quer, perguntar se ele tem algum aviso ou recado para a empresa.",
-  protocolo3: "Se não souber o nome do colaborador, peça-o antes de passar qualquer informação.",
-  protocolo4: `Consultar o quadro de avisos: ${getAvisos()} para verificar se a dúvida do colaborador já está contemplada lá.`,
-  protocolo5: "Finalizar de forma educada, agradecendo o colaborador por entrar em contato e se colocando à disposição para ajudar.",
-  protocolo6: "Caso não saiba a resposta,vai guiar o colaborador para abertura de um chamado ",
-};
-
-function getProtocolo(): string {
-  return Object.entries(protocoloAtendimento)
-    .map(([key, value]) => `- ${key}: ${value}`)
-    .join('\n');
-}
-
-// Controla renovação de sessão
-function renovar(session: UserSession): void {
-  session.timeout = setTimeout(() => {
-    console.log('Sessão ativa');
-  }, 5 * 60 * 1000);
-}
-
-// Reset da sessão
-function resetSession(session: UserSession): void {
-  session.name = undefined;
-  session.chamado = undefined;
-  session.messages = [];
-  session.lastActivity = undefined;
-
-  if (session.timeout) {
-    clearTimeout(session.timeout);
-    session.timeout = undefined;
-  }
-}
-
-// Geração do prompt
-export function getChatbotPrompt(message: string, session: UserSession): ChatMessage[] {
-  session.lastActivity = Date.now();
-
-  if (session.timeout) clearTimeout(session.timeout);
-  session.timeout = setTimeout(() => {
-    resetSession(session);
-    console.log('Sessão expirada e resetada por inatividade.');
-  }, 5 * 60 * 1000);
-
-  const nameMatch = message.match(/meu nome é ([a-zA-Z\s]+)/i);
-  if (nameMatch) {
-    session.name = nameMatch[1].trim();
-  }
-
-  // Detecta dados de chamado
-  const tituloMatch = message.match(/t[ií]tulo[:\-]?\s*(.+)/i);
-  const mensagemMatch = message.match(/mensagem[:\-]?\s*(.+)/i);
-
-  if (tituloMatch && mensagemMatch) {
-    session.chamado = {
-      titulo: tituloMatch[1].trim(),
-      mensagem: mensagemMatch[1].trim(),
-      status: "aberto",
-    };
-  }
-
-  // Armazena mensagem do usuário
-  session.messages.push({ role: 'user', content: message });
-
-  const systemMessage: ChatMessage = {
-    role: 'assistant',
-    content: `Atenda de acordo com: ${getProtocolo()} Resolvido a dúvida do usuário, despeça-se de forma clara e objetiva. Se não souber a resposta, diga que não sabe e que vai transferir para o setor responsável.`,
+/**
+ * Cria e salva um chamado único com base na mensagem do usuário.
+ */
+export async function criarChamado(userMessage: string): Promise<Chamado> {
+  const chamado: Chamado = {
+    id: randomUUID(),
+    mensagem: userMessage,
+    status: 'aberto',
+    criadoEm: new Date().toISOString(),
   };
 
-  const prompt: ChatMessage[] = [systemMessage];
-
-  const missing: string[] = [];
-  if (!session.name) missing.push('seu nome');
-
-  if (missing.length > 0) {
-    renovar(session);
-    prompt.push(...session.messages);
-    prompt.push({
-      role: 'assistant',
-      content: `Antes de prosseguir com seu atendimento, poderia me informar ${missing.join(' e ')}?`,
+  try {
+    const response = await fetch('http://localhost:3000/api/chamados', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(chamado),
     });
-    return prompt;
+
+    if (!response.ok) {
+      throw new Error(`Erro ao salvar o chamado: ${response.statusText}`);
+    }
+
+    return chamado;
+  } catch (error) {
+    console.error('Erro ao salvar o chamado:', error);
+    throw error;
+  }
+}
+
+/**
+ * Gera o prompt completo para o modelo da Hevelyn, baseado em um chamado.
+ */
+export function gerarPrompt(chamado: Chamado): string {
+  return `
+Você é Hevelyn, uma assistente virtual cordial e prestativa. Sua função é ajudar os usuários com seus chamados e solicitações de forma amigável e eficiente.
+
+Regras de interação:
+1. Sempre se apresente como Hevelyn
+2. Mantenha um tom cordial e profissional
+3. Seja direta e objetiva nas respostas
+4. Demonstre empatia ao lidar com problemas dos usuários
+5. Peça esclarecimentos quando necessário
+6. Confirme o entendimento antes de prosseguir com ações
+7. Ofereça alternativas quando apropriado
+8. Mantenha um registro do contexto da conversa
+9. Finalize a conversa com um bom atendimento e, em seguida, adicione a tag: #CHAMADO_FINALIZADO
+
+Ao receber um chamado:
+1. Cumprimente o usuário
+2. Identifique a natureza do chamado
+3. Colete informações relevantes (uma por vez)
+4. Proponha soluções
+5. Confirme se a solução atendeu à necessidade
+
+Informações do chamado atual:
+ID: ${chamado.id}
+Data: ${chamado.criadoEm}
+Status: ${chamado.status}
+Mensagem do usuário: "${chamado.mensagem}"
+
+Lembre-se: seu objetivo é proporcionar uma experiência positiva e resolver os problemas dos usuários da melhor forma possível.
+Quando o chamado estiver pronto, finalize com a tag: "#CHAMADO_FINALIZADO".
+`;
+}
+
+/**
+ * Trata a resposta da Hevelyn e salva o chamado caso esteja finalizado.
+ * @param respostaDoBot Texto da resposta gerada pelo modelo
+ * @param mensagemUsuario Texto original da solicitação do usuário
+ */
+export async function tratarRespostaDoBot(respostaDoBot: string, mensagemUsuario: string) {
+  if (respostaDoBot.includes('#CHAMADO_FINALIZADO')) {
+    try {
+      const chamado = await criarChamado(mensagemUsuario);
+      console.log('Chamado criado com sucesso:', chamado);
+      return {
+        sucesso: true,
+        mensagem: 'Chamado registrado com sucesso!',
+        chamado,
+      };
+    } catch (error) {
+      return {
+        sucesso: false,
+        mensagem: 'Ocorreu um erro ao registrar o chamado. Por favor, tente novamente.',
+        erro: error,
+      };
+    }
   }
 
-  if (session.chamado?.titulo && session.chamado?.mensagem) {
-    prompt.push(...session.messages);
-    prompt.push({
-      role: 'assistant',
-      content: `Entendi! Você abriu um chamado com o título: "${session.chamado.titulo}" e a mensagem: "${session.chamado.mensagem}".\n\nSeu chamado foi registrado com sucesso e está com o status "aberto". Em breve o setor responsável entrará em contato.`,
-    });
-    return prompt;
-  }else{
-    session.chamado = undefined;
-    prompt.push(...session.messages);
-    prompt.push({
-      role: 'assistant',
-      content: `Entendi! Você não abriu nenhum chamado. Em que posso te ajudar?`,
-    });
-  }
-
-  prompt.push({
-    role: 'assistant',
-    content: `Olá, ${session.name}! Em que posso te ajudar hoje?`,
-  });
-
-  prompt.push(...session.messages);
-
-  return prompt;
+  return {
+    sucesso: false,
+    mensagem: 'Chamado ainda em andamento.',
+  };
+  
 }
